@@ -381,7 +381,9 @@ function sandwich_check(game_state, aggressor_square) {
       if (!active_rules.armed_king) continue;
 
       // Armed king capture rules
-      if (aggressor === "d" && helping_aggressor === "k" && victim === "a") {
+      if (aggressor === "d" && helping_aggressor === "k" && victim === "a" ||
+          aggressor === "k" && helping_aggressor === "d" && victim === "a"
+      ) {
         console.log("Armed king Piece capture at:", [victim_y, victim_x]);
         game_state[victim_y][victim_x] = ' ';
         taken_piece_coordinates.push([victim_y, victim_x]);
@@ -390,8 +392,8 @@ function sandwich_check(game_state, aggressor_square) {
       // Check if take_against_restricted_squares rule is active
       if (!active_rules.take_against_restricted_squares) continue;
       if (restricted_squares.some(([ry, rx]) => ry === helping_aggressor_pos[0] && rx === helping_aggressor_pos[1])) {
-        // Prevent king from capturing defenders against restricted squares
-        if (aggressor === "k" && victim === "d") {
+        // Prevent king from capturing defenders against restricted squares and defenders being captured against king
+        if (aggressor === "k" || helping_aggressor === "k"  && victim === "d") {
           continue;
         }
         if (victim !== "k") {

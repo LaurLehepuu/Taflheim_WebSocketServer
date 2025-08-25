@@ -22,9 +22,9 @@ const clientManager = new ClientManager();
 const gameManager = new GameManager();
 
 // Initialize handlers here
-connectionHandler = new ConnectionHandler(clientManager);
-gameHandler = new GameHandler(clientManager, gameManager);
-moveHandler = new MoveHandler(clientManager, gameManager);
+const connectionHandler = new ConnectionHandler(clientManager);
+const gameHandler = new GameHandler(clientManager, gameManager);
+const moveHandler = new MoveHandler(clientManager, gameManager);
 
 //Initialize webSocketManager
 const webSocketManager = new WebSocketManager(httpServer, connectionHandler, gameHandler, moveHandler, clientManager, gameManager);

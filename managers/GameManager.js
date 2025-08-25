@@ -7,6 +7,11 @@ class GameManager extends EventEmitter {
     super();
     this.games = {};
     this.takenRoles = []
+
+    // Start cleanup interval (check every 5 minutes)
+    this.cleanupInterval = setInterval(() => {
+      this.cleanupInactiveGames();
+    }, 5 * 60 * 1000);
   }
 
   //Creates and returns a game -> Dictionary
@@ -19,7 +24,9 @@ class GameManager extends EventEmitter {
       clients: [], //Stores client objects
       takenRoles: [],
       current_turn: "attacker",
-      active: false
+      active: false,
+      created_at: Date.now(),
+      last_activity: Date.now()
     };
     console.log(`Game created: ${game_id}`);
     return this.games[game_id];
@@ -84,6 +91,7 @@ class GameManager extends EventEmitter {
     if (this.games[game_id]) {
       this.games[game_id].game_state_history.push(previousState);
       this.games[game_id].game_state = newState;
+      game.lastActivity = Date.now()
     }
   }
   
@@ -161,6 +169,7 @@ class GameManager extends EventEmitter {
     const game = this.games[gameId];
     game.active = true;
     game.timer.start() 
+    game.lastActivity = Date.now()
   }
 
   getGameTimes(game_id) {
@@ -178,6 +187,31 @@ class GameManager extends EventEmitter {
     game.active = false;
     game.won_by = win_con 
     game.timer.stop()
+    game.lastActivity = Date.now()
+  }
+
+  // Cleanup inactive games
+  cleanupInactiveGames() {
+    const now = Date.now();
+    const gamesToDelete = [];
+
+    for (const [gameId, game] of Object.entries(this.games)) {
+      const timeSinceActivity = now - game.lastActivity;
+      
+      // Delete if inactive for longer than timeout or if game ended and been inactive
+      if (timeSinceActivity > this.inactivityTimeout || 
+          (!game.active && timeSinceActivity > 10 * 60 * 1000)) { // 10 min for ended games
+        gamesToDelete.push(gameId);
+      }
+    }
+
+    gamesToDelete.forEach(gameId => {
+      this.deleteGame(gameId);
+    });
+
+    if (gamesToDelete.length > 0) {
+      console.log(`Cleaned up ${gamesToDelete.length} inactive games`);
+    }
   }
 
 }

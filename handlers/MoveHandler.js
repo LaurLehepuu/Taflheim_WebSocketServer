@@ -15,7 +15,6 @@ class MoveHandler {
     const game = this.gameManager.getGame(game_id);
     const player_role = this.gameManager.getPlayerRole(game_id, client_id)
     const current_turn = this.gameManager.getCurrentTurn(game_id)
-    console.log(player_role, current_turn) 
 
     // If it is not currently this players turn, return
     if (this.gameManager.getCurrentTurn(game_id) != this.gameManager.getPlayerRole(game_id, client_id)){

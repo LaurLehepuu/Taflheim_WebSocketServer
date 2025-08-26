@@ -63,17 +63,9 @@ class PayloadBuilder {
         };
     }
 
-    static move(correct, timers) {
+    static move(move_from, move_to, timers) {
         return {
             method: "move",
-            correct,
-            timers
-        };
-    }
-
-    static sync(move_from, move_to, timers) {
-        return {
-            method: "sync",
             move_from,
             move_to,
             timers

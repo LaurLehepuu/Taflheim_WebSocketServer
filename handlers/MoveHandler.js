@@ -2,9 +2,11 @@
 const ruleEngine = require('../utils/RuleEngine');
 const PayloadBuilder = require('../utils/PayloadBuilder');
 const InputValidator = require('../utils/InputValidator');
+const EventEmitter = require('events');
 
-class MoveHandler {
+class MoveHandler extends EventEmitter {
   constructor(clientManager, gameManager) {
+    super()
     this.clientManager = clientManager;
     this.gameManager = gameManager;
 
@@ -56,12 +58,7 @@ class MoveHandler {
       return;
     }
 
-    if (!game) {
-      console.log("Game not found for move:", game_id);
-      return;
-    }
-
-    //This should never happen due to inactive pieces on the client
+    //This should never happen due to inactive pieces on the client but we might want to change that someday
     if (game.active == false){
       console.log("Game is inactive")
       return;
@@ -69,19 +66,16 @@ class MoveHandler {
 
     const gameState = game.game_state;
     const isValid = ruleEngine.is_move_valid(gameState, move_from, move_to);
-    
-    // Send validation result to the player who made the move
-    const timers = this.gameManager.getGameTimes(game_id)
-    const validationPayload = PayloadBuilder.move(move_from, move_to, timers);
-    this.clientManager.getClient(client_id).connection.send(JSON.stringify(validationPayload));
 
-    if (isValid) { //If the move is valid, continue on with Processing the move
-      this.processValidMove(game_id, client_id, move_from, move_to, gameState);
+    //If the move is valid, continue on with Processing the move
+    if (isValid) {
+      this.processValidMove(game_id, move_from, move_to, gameState);
     }
   }
 
   //Does all the work needed for movement to occur -> void
-  processValidMove(gameId, clientId, moveFrom, moveTo, gameState) {
+  processValidMove(gameId, moveFrom, moveTo, gameState) {
+
     // Update game state
     const previousState = JSON.parse(JSON.stringify(gameState)); // Deep copy
     gameState[moveTo[1]][moveTo[0]] = gameState[moveFrom[1]][moveFrom[0]];
@@ -93,13 +87,13 @@ class MoveHandler {
     ruleEngine.has_taking_occurred(gameState, moveTo);
     if (ruleEngine.taken_piece_coordinates.length > 0) {
       const takenPayload = PayloadBuilder.taken(gameId, ruleEngine.taken_piece_coordinates);
-      this.broadcastToGame(gameId, takenPayload);
+      this.emit('broadcastToGame', gameId, takenPayload)
     }
 
     // Sync move to other players
     const timers = this.gameManager.getGameTimes(gameId)
     const move_payload = PayloadBuilder.move(moveFrom, moveTo, timers);
-    this.broadcastToGame(gameId, move_payload);
+    this.emit('broadcastToGame', gameId, move_payload)
 
     // Check for win condition
     const hasWon = ruleEngine.has_win_occurred(gameState);
@@ -107,35 +101,11 @@ class MoveHandler {
       console.log(ruleEngine.game_over_reason);
       const winPayload = PayloadBuilder.win(gameId, ruleEngine.game_over_reason, ruleEngine.winner);
       this.gameManager.gameWin(gameId, ruleEngine.game_over_reason)
-      this.broadcastToGame(gameId, winPayload);
+      this.emit('broadcastToGame', gameId, winPayload)
     }
 
     //Change whose turn it is
     this.gameManager.changeTurn(gameId);
-  }
-
-  // Broadcasts a payload to all players in a game -> void
-  broadcastToGame(gameId, payload) {
-    const clients = this.gameManager.getGameClients(gameId);
-    clients.forEach(clientObj => {
-      const client = this.clientManager.getClient(clientObj.id);
-      if (client) {
-        client.connection.send(JSON.stringify(payload));
-      }
-    });
-  }
-
-  // Broadcasts a payload to all players excluding the one who originally sent it -> void
-  broadcastToOtherPlayers(gameId, excludeClientId, payload) {
-    const clients = this.gameManager.getGameClients(gameId);
-    clients.forEach(clientObj => {
-      if (clientObj.id !== excludeClientId) {
-        const client = this.clientManager.getClient(clientObj.id);
-        if (client) {
-          client.connection.send(JSON.stringify(payload));
-        }
-      }
-    });
   }
 }
 

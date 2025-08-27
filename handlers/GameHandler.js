@@ -2,9 +2,11 @@
 const { v4: uuidv4 } = require('uuid');
 const PayloadBuilder = require('../utils/PayloadBuilder');
 const InputValidator = require('../utils/InputValidator');
+const EventEmitter = require('events');
 
-class GameHandler {
+class GameHandler extends EventEmitter {
   constructor(clientManager, gameManager) {
+    super();
     this.clientManager = clientManager;
     this.gameManager = gameManager;
   }
@@ -60,7 +62,7 @@ class GameHandler {
     const joinPayload = PayloadBuilder.join(client_id, game);
 
     // Notify all clients in the game
-    this.broadcastToGame(game_id, joinPayload);
+    this.emit('broadcastToGame', game_id, joinPayload)
   }
 
   // Handles client ready status -> void

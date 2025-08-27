@@ -22,32 +22,9 @@ class WebSocketManager {
     });
     
     this.setupWebSocketHandlers();
-
-    //Find a better way to do this, for now gameManager emits Event
-    this.gameManager.on('gameTimeout', (game_id, win_con, winner) => {
-      this.gameHandler.handleTimeout(game_id, win_con, winner)
-    });
+    this.setupEventListeners();
   }
 
-  sendError(connection, errorType, message, details = null) {
-    if (!connection || connection.readyState != connection.OPEN) {
-      console.error("Cannot send error - connection is not open")
-      return false;
-    }
-
-    try {
-      const errorPayload = PayloadBuilder.error(errorType, message, details);
-      connection.send(JSON.stringify(errorPayload))
-      console.log(`Error sent to client: ${errorType} - ${message}`)
-      return true
-
-    } catch (sendError) {
-      console.error("Failed to send error message:", sendError);
-      return false;
-    }
-
-  }
-  
   //Sets up websocket -> void
   setupWebSocketHandlers() {
     this.websocket.on("request", request => {
@@ -67,6 +44,25 @@ class WebSocketManager {
 
       connection.on("message", (message) => this.parseMessage(message, connection));
     });
+  }
+
+  //Sets up event listeners so managers could use events to talk to websockets
+  setupEventListeners() {
+
+    //Timeout Event
+    this.gameManager.on('gameTimeout', (game_id, win_con, winner) => {
+      this.gameHandler.handleTimeout(game_id, win_con, winner)
+    });
+
+    //#region Send events
+    this.moveHandler.on('broadcastToGame', (game_id, payload) => {
+      this.broadcastToGame(game_id, payload);
+    });
+
+    this.gameHandler.on('broadcastToGame', (game_id, payload) => {
+      this.broadcastToGame(game_id, payload);
+    })
+    //#endregion
   }
 
   handleConnectionError(connection, error) {
@@ -187,6 +183,63 @@ routeMessage(message, connection) {
       });
     }
   }
+
+  //#region send messages
+  //Broadcasts payload to other players in the game -> void
+  broadcastToOtherPlayers(gameId, excludeClientId, payload) {
+    const clients = this.gameManager.getGameClients(gameId);
+    clients.forEach(clientObj => {
+      if (clientObj.id !== excludeClientId) {
+        const client = this.clientManager.getClient(clientObj.id);
+        if (client) {
+            client.connection.send(JSON.stringify(payload));
+        }
+      }});
+    }
+
+  // Broadcasts a payload to all players in a game -> void
+  broadcastToGame(gameId, payload) {
+      const clients = this.gameManager.getGameClients(gameId);
+      clients.forEach(clientObj => {
+          const client = this.clientManager.getClient(clientObj.id);
+          if (client) {
+              client.connection.send(JSON.stringify(payload));
+          }
+      });
+    }
+
+    //Sends the error message to the given connection -> bool
+    sendError(connection, error_type, message, details = null) {
+    if (!connection || connection.readyState != connection.OPEN) {
+      console.error("Cannot send error - connection is not open")
+      return false;
+    }
+
+    try {
+      const errorPayload = PayloadBuilder.error(error_type, message, details);
+      connection.send(JSON.stringify(errorPayload))
+      console.log(`Error sent to client: ${error_type} - ${message}`)
+      return true
+
+    } catch (sendError) {
+      console.error("Failed to send error message:", sendError);
+      return false;
+    }
+  }
+
+  //Sends an error to the client specified
+  sendErrorToClient(clientId, error_type, message, details = null) {
+      const client = this.clientManager.getClient(clientId);
+      if (client && client.connection) {
+          const errorPayload = PayloadBuilder.error(error_type, message, details);
+          try {
+              client.connection.send(JSON.stringify(errorPayload));
+          } catch (error) {
+              console.error('Failed to send error to client', { clientId, error: error.message });
+          }
+      }
+  }
+  //#endregion
 }
 
 

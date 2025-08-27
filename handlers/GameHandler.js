@@ -1,6 +1,7 @@
 /* Handles Game related actions */
 const { v4: uuidv4 } = require('uuid');
 const PayloadBuilder = require('../utils/PayloadBuilder');
+const InputValidator = require('../utils/InputValidator');
 
 class GameHandler {
   constructor(clientManager, gameManager) {
@@ -23,7 +24,27 @@ class GameHandler {
   // Handles people joining games -> void
   handleJoin(message) {
     const { client_id, game_id, role } = message;
-    
+
+
+    //#region Input Validations
+
+    //Send error to client doesnt work from websocket
+    if (!InputValidator.validateClientId(client_id)) {
+      this.sendErrorToClient(client_id, "invalid_client_id", "Client ID format is invalid");
+      return
+    }
+
+    if (!InputValidator.validateGameId(game_id)) {
+      this.sendErrorToClient(client_id, "invalid_game_id", "Game ID format is invalid")
+      return;
+    }
+
+    if (role && !InputValidator.validateRole(role)) {
+    this.sendErrorToClient(client_id, "invalid_role", "Role must be 'attacker' or 'defender'");
+    return;
+    }
+    //#endregion
+
     if (!this.gameManager.gameExists(game_id)) {
       console.log("Game not found:", game_id);
       return;
@@ -93,6 +114,18 @@ class GameHandler {
         client.connection.send(JSON.stringify(payload));
       }
     });
+  }
+
+  sendErrorToClient(clientId, errorType, message, details = null) {
+    const client = this.clientManager.getClient(clientId);
+    if (client && client.connection) {
+      const errorPayload = PayloadBuilder.error(errorType, message, details);
+      try {
+        client.connection.send(JSON.stringify(errorPayload));
+      } catch (error) {
+        console.error('Failed to send error to client', { clientId, error: error.message });
+      }
+    }
   }
 
    broadcastToOtherPlayers(gameId, excludeClientId, payload) {

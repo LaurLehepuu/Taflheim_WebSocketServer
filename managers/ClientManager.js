@@ -34,6 +34,23 @@ class ClientManager {
   clientExists(client_id) {
     return !!this.clients[client_id];
   }
+
+  getAllClients() {
+    return this.clients
+  }
+
+  sendErrorToClient(clientId, errorType, message, details = null) {
+    const client = this.clientManager.getClient(clientId);
+    if (client && client.connection) {
+      const errorPayload = PayloadBuilder.error(errorType, message, details);
+      try {
+        client.connection.send(JSON.stringify(errorPayload));
+      } catch (error) {
+        console.error('Failed to send error to client', { clientId, error: error.message });
+      }
+    }
+  }
+  
 }
 
 module.exports = ClientManager

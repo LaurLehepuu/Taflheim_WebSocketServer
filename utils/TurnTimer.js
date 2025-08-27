@@ -12,30 +12,35 @@ class TurnTimer {
     start() {
         if (this.is_running) return;
 
-        this.is_running = true;
-        this.lastUpdate = Date.now();
+        try {
+            this.is_running = true;
+            this.lastUpdate = Date.now();
 
-        this.interval = setInterval(() => {
-            const now = Date.now()
-            const elapsed = now - this.lastUpdate;
+            this.interval = setInterval(() => {
+                const now = Date.now()
+                const elapsed = now - this.lastUpdate;
 
-            if (this.active_side == "attacker") {
-                this.attacker_time = Math.max(0, this.attacker_time - elapsed);
-            } else {
-                this.defender_time = Math.max(0, this.defender_time - elapsed) 
-            }
+                if (this.active_side == "attacker") {
+                    this.attacker_time = Math.max(0, this.attacker_time - elapsed);
+                } else {
+                    this.defender_time = Math.max(0, this.defender_time - elapsed) 
+                }
 
-            this.lastUpdate = now;
+                this.lastUpdate = now;
 
-            // Check for timeout
-            if (this.defender_time == 0 || this.attacker_time == 0) {
-                this.stop()
-                this.onTimeout?.(
-                    this.defender_time == 0 ? "defender_timeout" : "attacker_timeout",
-                    this.defender_time == 0 ? "attacker" : "defender"
-                );
-            }
-        }, 100) //Update every 100ms
+                // Check for timeout
+                if (this.defender_time == 0 || this.attacker_time == 0) {
+                    this.stop()
+                    this.onTimeout?.(
+                        this.defender_time == 0 ? "defender_timeout" : "attacker_timeout",
+                        this.defender_time == 0 ? "attacker" : "defender"
+                    );
+                }
+            }, 100) //Update every 100ms
+        } catch (error) {
+            console.error("Timer start error:", error);
+            this.is_running = false;
+        }
     }
 
     stop() {

@@ -9,12 +9,19 @@ class PayloadBuilder {
         };
     }
 
-    static error(type, message) {
-        return {
+    static error(error_type, message, details = null) {
+        const payload = {
             method: "error",
-            type,
-            message
+            error_type,
+            message,
+            timestamp: new Date().toISOString()
         };
+
+        if (details) {
+            payload.details = details;
+        }
+
+        return payload;
     }
 
     static create(game) {

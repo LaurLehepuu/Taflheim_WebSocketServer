@@ -45,6 +45,17 @@ class GameManager extends EventEmitter {
   //Returns true if player could be added, otherwise false -> bool
   addPlayerToGame(gameId, client_id, role) {
     const game = this.games[gameId];
+
+    if(!game) {
+      console.error(`Game ${gameId} not found`);
+      return false;
+    }
+
+    if (!client_id) {
+      console.error("Cliend ID is required")
+      return false;
+    }
+
     if (game && game.clients.length < 2) {
         // Check if client is already in the game
         game.clients.forEach(client => {

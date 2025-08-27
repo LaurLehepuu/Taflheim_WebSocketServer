@@ -3,7 +3,7 @@ const EventEmitter = require('events');
 const TurnTimer = require('../utils/TurnTimer')
 
 class GameManager extends EventEmitter {
-  constructor() {
+  constructor(inactivityTimeout = 30 * 60 * 1000) { //default 30 minutes
     super();
     this.games = {};
     this.takenRoles = []
@@ -12,6 +12,7 @@ class GameManager extends EventEmitter {
     this.cleanupInterval = setInterval(() => {
       this.cleanupInactiveGames();
     }, 5 * 60 * 1000);
+    this.inactivityTimeout = inactivityTimeout;
   }
 
   //Creates and returns a game -> Dictionary
@@ -88,7 +89,7 @@ class GameManager extends EventEmitter {
 
       // Updates game state (and saves game state to history) -> void
       updateGameState(game_id, newState, previousState) {
-        const game = this.game[game_id]
+        const game = this.games[game_id]
     if (game) {
       game.game_state_history.push(previousState);
       game.game_state = newState;
@@ -213,6 +214,22 @@ class GameManager extends EventEmitter {
     if (gamesToDelete.length > 0) {
       console.log(`Cleaned up ${gamesToDelete.length} inactive games`);
     }
+  }
+
+    // Delete a specific game
+  deleteGame(gameId) {
+    const game = this.games[gameId];
+    if (game) {
+      // Stop timer if still running
+      if (game.timer) {
+        game.timer.stop();
+      }
+      
+      delete this.games[gameId];
+      console.log(`Game deleted: ${gameId}`);
+      return true;
+    }
+    return false;
   }
 
 }

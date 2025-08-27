@@ -17,7 +17,7 @@ class MoveHandler {
     const current_turn = this.gameManager.getCurrentTurn(game_id)
 
     // If it is not currently this players turn, return
-    if (this.gameManager.getCurrentTurn(game_id) != this.gameManager.getPlayerRole(game_id, client_id)){
+    if (current_turn != player_role){
       console.log("Not currently that players turn:", client_id)
       return;
     }
@@ -38,7 +38,7 @@ class MoveHandler {
     
     // Send validation result to the player who made the move
     const timers = this.gameManager.getGameTimes(game_id)
-    const validationPayload = PayloadBuilder.move(isValid, timers);
+    const validationPayload = PayloadBuilder.move(move_from, move_to, timers);
     this.clientManager.getClient(client_id).connection.send(JSON.stringify(validationPayload));
 
     if (isValid) { //If the move is valid, continue on with Processing the move
@@ -64,8 +64,8 @@ class MoveHandler {
 
     // Sync move to other players
     const timers = this.gameManager.getGameTimes(gameId)
-    const syncPayload = PayloadBuilder.sync(moveFrom, moveTo, timers);
-    this.broadcastToOtherPlayers(gameId, clientId, syncPayload);
+    const move_payload = PayloadBuilder.move(moveFrom, moveTo, timers);
+    this.broadcastToGame(gameId, move_payload);
 
     // Check for win condition
     const hasWon = ruleEngine.has_win_occurred(gameState);

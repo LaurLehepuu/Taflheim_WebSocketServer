@@ -58,12 +58,7 @@ class MoveHandler extends EventEmitter {
       return;
     }
 
-    if (!game) {
-      console.log("Game not found for move:", game_id);
-      return;
-    }
-
-    //This should never happen due to inactive pieces on the client
+    //This should never happen due to inactive pieces on the client but we might want to change that someday
     if (game.active == false){
       console.log("Game is inactive")
       return;
@@ -72,13 +67,15 @@ class MoveHandler extends EventEmitter {
     const gameState = game.game_state;
     const isValid = ruleEngine.is_move_valid(gameState, move_from, move_to);
 
-    if (isValid) { //If the move is valid, continue on with Processing the move
-      this.processValidMove(game_id, client_id, move_from, move_to, gameState);
+    //If the move is valid, continue on with Processing the move
+    if (isValid) {
+      this.processValidMove(game_id, move_from, move_to, gameState);
     }
   }
 
   //Does all the work needed for movement to occur -> void
-  processValidMove(gameId, clientId, moveFrom, moveTo, gameState) {
+  processValidMove(gameId, moveFrom, moveTo, gameState) {
+
     // Update game state
     const previousState = JSON.parse(JSON.stringify(gameState)); // Deep copy
     gameState[moveTo[1]][moveTo[0]] = gameState[moveFrom[1]][moveFrom[0]];

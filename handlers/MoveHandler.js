@@ -1,6 +1,7 @@
 /* Handles Move related actions */
 const ruleEngine = require('../utils/RuleEngine');
 const PayloadBuilder = require('../utils/PayloadBuilder');
+const InputValidator = require('../utils/InputValidator');
 
 class MoveHandler {
   constructor(clientManager, gameManager) {
@@ -12,7 +13,40 @@ class MoveHandler {
   //Handles everything to do with moves -> void
   handleMove(message) {
     const { game_id, client_id, move_from, move_to } = message;
+
+
+    //#region Input validators
+    if (!InputValidator.validateGameId(game_id)) {
+      console.error("Invalid game ID in move");
+      return;
+    }
+    
+    if (!InputValidator.validateMoveCoordinates(move_from)) {
+      console.error("Invalid move_from coordinates");
+      return;
+    }
+    
+    if (!InputValidator.validateMoveCoordinates(move_to)) {
+      console.error("Invalid move_to coordinates");  
+      return;
+    }
+    //#endregion
+
+
+    //Make sure all critical info exists
+    if (!game_id || !client_id || !move_from || !move_to) {
+      console.error("Missing required move paramaters");
+      return;
+    }
+
     const game = this.gameManager.getGame(game_id);
+
+    //Make sure game exists
+    if (!game) {
+      console.error(`Game ${game_id} not found`);
+      return;
+    }
+
     const player_role = this.gameManager.getPlayerRole(game_id, client_id)
     const current_turn = this.gameManager.getCurrentTurn(game_id)
 

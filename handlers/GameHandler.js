@@ -89,7 +89,7 @@ class GameHandler extends EventEmitter {
 
     // Notify all clients that someone is ready
     const ready_payload = PayloadBuilder.ready(client_id, game_id);
-    this.broadcastToGame(game_id, ready_payload);
+    this.emit('broadcastToGame', game_id, ready_payload)
 
     // If all clients are ready, send the players their roles and start the game
     if (all_ready) {
@@ -106,41 +106,7 @@ class GameHandler extends EventEmitter {
     const win_payload = PayloadBuilder.win(game_id, win_con, winner)
     this.broadcastToGame(game_id, win_payload)
   }
-
-  //Handles sending a payload to everyone in a game -> void
-  broadcastToGame(gameId, payload) {
-    const clients = this.gameManager.getGameClients(gameId);
-    clients.forEach(clientObj => {
-      const client = this.clientManager.getClient(clientObj.id);
-      if (client) {
-        client.connection.send(JSON.stringify(payload));
-      }
-    });
-  }
-
-  sendErrorToClient(clientId, errorType, message, details = null) {
-    const client = this.clientManager.getClient(clientId);
-    if (client && client.connection) {
-      const errorPayload = PayloadBuilder.error(errorType, message, details);
-      try {
-        client.connection.send(JSON.stringify(errorPayload));
-      } catch (error) {
-        console.error('Failed to send error to client', { clientId, error: error.message });
-      }
-    }
-  }
-
-   broadcastToOtherPlayers(gameId, excludeClientId, payload) {
-    const clients = this.gameManager.getGameClients(gameId);
-    clients.forEach(clientObj => {
-      if (clientObj.id !== excludeClientId) {
-        const client = this.clientManager.getClient(clientObj.id);
-        if (client) {
-          client.connection.send(JSON.stringify(payload));
-        }
-      }
-    });
-  }
+  
 }
 
 module.exports = GameHandler;

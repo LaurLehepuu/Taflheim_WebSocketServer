@@ -19,7 +19,7 @@ class ClientManager {
     console.log(`Client removed: ${client_id}`);
   }
 
-  //Returns a client by its id -> string
+  //Returns a clients connection by its id -> string
   getClient(client_id) {
     return this.clients[client_id];
   }
@@ -39,18 +39,6 @@ class ClientManager {
     return this.clients
   }
 
-  sendErrorToClient(clientId, errorType, message, details = null) {
-    const client = this.clientManager.getClient(clientId);
-    if (client && client.connection) {
-      const errorPayload = PayloadBuilder.error(errorType, message, details);
-      try {
-        client.connection.send(JSON.stringify(errorPayload));
-      } catch (error) {
-        console.error('Failed to send error to client', { clientId, error: error.message });
-      }
-    }
-  }
-  
 }
 
 module.exports = ClientManager

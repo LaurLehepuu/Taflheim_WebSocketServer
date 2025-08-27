@@ -98,9 +98,9 @@ class GameManager extends EventEmitter {
     return false;
   }
 
-      // Updates game state (and saves game state to history) -> void
-      updateGameState(game_id, newState, previousState) {
-        const game = this.games[game_id]
+  // Updates game state (and saves game state to history) -> void
+  updateGameState(game_id, newState, previousState) {
+    const game = this.games[game_id]
     if (game) {
       game.game_state_history.push(previousState);
       game.game_state = newState;

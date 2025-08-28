@@ -7,12 +7,13 @@ const MoveHandler = require('../handlers/MoveHandler');
 const PayloadBuilder = require("../utils/PayloadBuilder");
 
 class WebSocketManager {
-  constructor(httpServer, connectionHandler, gameHandler, moveHandler, clientManager, gameManager) {
+  constructor(httpServer, connectionHandler, gameHandler, moveHandler, clientManager, gameManager, resourceManager) {
     this.connectionHandler = connectionHandler;
     this.gameHandler = gameHandler;
     this.moveHandler = moveHandler
     this.clientManager = clientManager;
     this.gameManager = gameManager;
+    this.resourceManager = resourceManager
     
     
     
@@ -28,17 +29,26 @@ class WebSocketManager {
   //Sets up websocket -> void
   setupWebSocketHandlers() {
     this.websocket.on("request", request => {
+      const client_ip = request.remoteAddress; 
+
+      //If a connection cant be created due to resource manager
+      if (!this.resourceManager.canCreateConnection(client_ip)) {
+        console.error(`The following IP Address has too many open connections: ${client_ip}`)
+        return
+      }
+
       const connection = request.accept(null, request.origin);
-      
+      console.log(`Connection opened to IP:${client_ip}`)
+      this.resourceManager.addConnection(client_ip)
+
       connection.on("error", (error) => {
         console.error("Websocket Connection error:", error)
         this.handleConnectionError(connection, error);
       });
 
-      connection.on("open", () => console.log("Connection opened"));
-
       connection.on("close", () => {
         console.log(`Connection closed`)
+        this.resourceManager.removeConnection(client_ip)
         //Wait a little and if connection isnt resumed, remove from active clients 
       });
 
@@ -66,9 +76,14 @@ class WebSocketManager {
   }
 
   handleConnectionError(connection, error) {
-    const clientId = this.findClientByConnection(connection);
-    if (clientId) {
-      this.clientManager.removeClient(clientId)
+    const client_id = this.findClientByConnection(connection);
+    const client_ip = connection.remoteAddress
+
+    //If you found the client, proceed to handle error
+    if (client_id) {
+      this.clientManager.removeClient(client_id)
+      this.resourceManager.removeConnection(client_ip)
+      this.sendErrorToClient(client_id, "connection_error", "there was an error with your connection")
     }
   }
 

@@ -45,10 +45,9 @@ class WebSocketManager {
         this.handleConnectionError(connection, error);
       });
 
-      connection.on("close", () => {
-        console.log(`Connection closed`)
-        this.resourceManager.removeConnection(client_ip)
-        //Wait a little and if connection isnt resumed, remove from active clients 
+      connection.on("close", (reasonCode, description) => {
+        console.log(`Connection closed with code: ${reasonCode}, description: ${description}`);
+        this.handleDisconnect(connection)
       });
 
       connection.on("message", (message) => this.parseMessage(message, connection));
@@ -92,6 +91,53 @@ class WebSocketManager {
       this.clientManager.removeClient(client_id)
       this.resourceManager.removeConnection(client_ip)
       this.sendErrorToClient(client_id, "connection_error", "there was an error with your connection")
+    }
+  }
+
+  handleDisconnect(connection) {
+    try {
+      const client_ip = connection.remoteAddress
+      if (!connection) {
+        this.resourceManager.removeConnection(client_ip)
+        throw new Error('Connection not defined')
+      }
+      const client_id = this.findClientByConnection(connection)
+      if (!client_id) {
+        throw new Error('Handling disconnect failed due to a non existent client_id')
+      }
+
+      //Remove connection from resource manager
+      this.resourceManager.removeConnection(client_ip)
+      const client = this.clientManager.getClient(client_id)
+      
+      //Remove client from any active game
+      if (client && client.game_id) {
+        const game = this.gameManager.getGame(client.game_id);
+        if (game && game.active) {
+          //End the game due to disconnection
+          this.gameHandler.handleWin ({
+            client_id,
+            game_id: client.game_id,
+            win_condition: "opponent_disconnect"
+          })
+        }
+      }
+
+      // Set up a timeout to allow reconnections
+      setTimeout(() => {
+
+        if (!client || connection.readyState != connection.OPEN) {
+          console.log(`Client ${client_id} did not reconnect, cleaning up`);
+        }
+
+        //Remove client from client manager
+        this.clientManager.removeClient(client_id);
+
+        console.log(`Client ${client_id} removed due to disconnect`)
+
+      }, 1000 * 30) //30 second timeout
+    } catch (error) {
+      console.error(error.message)
     }
   }
 

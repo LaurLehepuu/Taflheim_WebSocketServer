@@ -24,7 +24,7 @@ const resourceManager = new ResourceManager()
 
 // Initialize handlers here
 const connectionHandler = new ConnectionHandler(clientManager);
-const gameHandler = new GameHandler(clientManager, gameManager);
+const gameHandler = new GameHandler(clientManager, gameManager, resourceManager);
 const moveHandler = new MoveHandler(clientManager, gameManager);
 
 //Initialize webSocketManager

@@ -33,8 +33,7 @@ class WebSocketManager {
 
       //If a connection cant be created due to resource manager
       if (!this.resourceManager.canCreateConnection(client_ip)) {
-        console.error(`The following IP Address has too many open connections: ${client_ip}`)
-        return
+        request.reject(429, "This IP already has too many connections open")
       }
 
       const connection = request.accept(null, request.origin);
@@ -64,10 +63,19 @@ class WebSocketManager {
       this.gameHandler.handleTimeout(game_id, win_con, winner)
     });
 
+    //Removes game from specifics client limit
+    this.gameManager.on('deleteGame', (client_id) => {
+      this.resourceManager.removeGame(client_id)
+    })
+
     //#region Send events
     this.moveHandler.on('broadcastToGame', (game_id, payload) => {
       this.broadcastToGame(game_id, payload);
     });
+
+    this.gameHandler.on('sendErrorToClient', (client_id, error_type, message, details = null) => {
+      this.sendErrorToClient(client_id, error_type, message, details);
+    })
 
     this.gameHandler.on('broadcastToGame', (game_id, payload) => {
       this.broadcastToGame(game_id, payload);
@@ -143,6 +151,7 @@ validateMessage(message) {
 //Routes message via method -> void
 routeMessage(message, connection) {
   const { method, client_id } = message;
+  const client_ip = connection.remoteAddress;
 
   // Handle connection methods that don't require client validation
   if (method === "new_connection") {
@@ -167,7 +176,7 @@ routeMessage(message, connection) {
     try {
       switch (method) {
         case "create":
-          this.gameHandler.handleCreate(message);
+          this.gameHandler.handleCreate(message, client_ip);
           break;
         case "join":
           this.gameHandler.handleJoin(message);
@@ -243,14 +252,14 @@ routeMessage(message, connection) {
   }
 
   //Sends an error to the client specified
-  sendErrorToClient(clientId, error_type, message, details = null) {
-      const client = this.clientManager.getClient(clientId);
+  sendErrorToClient(client_id, error_type, message, details = null) {
+      const client = this.clientManager.getClient(client_id);
       if (client && client.connection) {
           const errorPayload = PayloadBuilder.error(error_type, message, details);
           try {
               client.connection.send(JSON.stringify(errorPayload));
           } catch (error) {
-              console.error('Failed to send error to client', { clientId, error: error.message });
+              console.error('Failed to send error to client', { client_id, error: error.message });
           }
       }
   }

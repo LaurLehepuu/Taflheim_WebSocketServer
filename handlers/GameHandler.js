@@ -109,6 +109,13 @@ class GameHandler extends EventEmitter {
     }
   }
 
+  handleWin(message) {
+    const {game_id, win_condition, winner} = message
+    this.gameManager.gameWin(game_id, win_condition) 
+    const win_payload = PayloadBuilder.win(game_id, win_condition, winner)
+    this.emit('broadcastToGame', game_id, win_payload)
+  }
+
   handleTimeout(game_id, win_con, winner) {
     this.gameManager.gameWin(game_id, win_con)
     const win_payload = PayloadBuilder.win(game_id, win_con, winner)

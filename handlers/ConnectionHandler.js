@@ -1,9 +1,11 @@
 /* Handles Connetion related actions */
 const { v4: uuidv4 } = require('uuid');
 const PayloadBuilder = require('../utils/PayloadBuilder');
+const { EventEmitter } = require('./GameHandler');
 
-class ConnectionHandler {
+class ConnectionHandler extends EventEmitter {
   constructor(clientManager) {
+    super();
     this.clientManager = clientManager;
   }
   
@@ -23,6 +25,7 @@ class ConnectionHandler {
     const session = this.clientManager.getClient(client_id);
 
     if (session) {
+      this.emit('clientResumed', client_id)
       this.clientManager.updateClientConnection(client_id, connection);
       
       if (game_id) {

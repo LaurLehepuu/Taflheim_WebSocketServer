@@ -65,7 +65,7 @@ class WebSocketManager {
     //Removes game from specifics client limit
     this.gameManager.on('deleteGame', (client_id) => {
       this.resourceManager.removeGame(client_id)
-    })
+    });
 
     //#region Send events
     this.moveHandler.on('broadcastToGame', (game_id, payload) => {
@@ -74,11 +74,15 @@ class WebSocketManager {
 
     this.gameHandler.on('sendErrorToClient', (client_id, error_type, message, details = null) => {
       this.sendErrorToClient(client_id, error_type, message, details);
-    })
+    });
 
     this.gameHandler.on('broadcastToGame', (game_id, payload) => {
       this.broadcastToGame(game_id, payload);
-    })
+    });
+
+    this.connectionHandler.on('clientResumed', (client_id) => {
+      this.clearDisconnectionTimeout(client_id);
+    });
     //#endregion
   }
 
@@ -95,50 +99,75 @@ class WebSocketManager {
   }
 
   handleDisconnect(connection) {
-    try {
-      const client_ip = connection.remoteAddress
-      if (!connection) {
-        this.resourceManager.removeConnection(client_ip)
-        throw new Error('Connection not defined')
-      }
-      const client_id = this.findClientByConnection(connection)
-      if (!client_id) {
-        throw new Error('Handling disconnect failed due to a non existent client_id')
-      }
-
-      //Remove connection from resource manager
-      this.resourceManager.removeConnection(client_ip)
-      const client = this.clientManager.getClient(client_id)
-      
-      //Remove client from any active game
-      if (client && client.game_id) {
-        const game = this.gameManager.getGame(client.game_id);
-        if (game && game.active) {
-          //End the game due to disconnection
-          this.gameHandler.handleWin ({
-            client_id,
-            game_id: client.game_id,
-            win_condition: "opponent_disconnect"
-          })
-        }
-      }
-
-      // Set up a timeout to allow reconnections
-      setTimeout(() => {
-
-        if (!client || connection.readyState != connection.OPEN) {
-          console.log(`Client ${client_id} did not reconnect, cleaning up`);
-        }
-
-        //Remove client from client manager
-        this.clientManager.removeClient(client_id);
-
-        console.log(`Client ${client_id} removed due to disconnect`)
-
-      }, 1000 * 30) //30 second timeout
-    } catch (error) {
-      console.error(error.message)
+    const client_ip = connection.remoteAddress;
+    
+    if (!connection) {
+      this.resourceManager.removeConnection(client_ip);
+      console.error('Connection not defined');
+      return;
     }
+    
+    const client_id = this.findClientByConnection(connection);
+    if (!client_id) {
+      this.resourceManager.removeConnection(client_ip);
+      console.error('Handling disconnect failed due to a non existent client_id');
+      return;
+    }
+    
+    // Remove connection from resource manager
+    this.resourceManager.removeConnection(client_ip);
+    
+    const client = this.clientManager.getClient(client_id);
+    
+    // Remove client from any active game immediately
+    if (client && client.game_id) {
+      const game = this.gameManager.getGame(client.game_id);
+      if (game && game.active) {
+
+        //Find client role
+        const role = this.gameManager.getPlayerRole(client.game_id, client_id)
+
+        const payload = {
+          client_id,
+          game_id: client.game_id,
+          win_condition: "opponent_disconnect",
+          winner: role == "attacker" ? "defender" : "attacker",
+        };
+        
+        // End the game due to disconnection
+        this.gameHandler.handleWin(payload);
+      }
+    }
+    
+    // Set up a timeout to allow for reconnection attempts
+    const timeoutId = setTimeout(() => {
+      const currentClient = this.clientManager.getClient(client_id);
+      
+      if (!currentClient || currentClient.connection.readyState !== currentClient.connection.OPEN) {
+        console.log(`Client ${client_id} did not reconnect, cleaning up`);
+        
+        this.clientManager.removeClient(client_id);
+        console.log(`Client ${client_id} removed due to disconnect`);
+      }
+      
+      // Clean up the timeout reference
+      if (this.disconnectionTimeouts) {
+        delete this.disconnectionTimeouts[client_id];
+      }
+    }, 30000);
+    
+    // Store the timeout ID so we can cancel it if client reconnects
+    if (!this.disconnectionTimeouts) {
+      this.disconnectionTimeouts = {};
+    }
+    this.disconnectionTimeouts[client_id] = timeoutId;
+  }
+
+  clearDisconnectionTimeout(client_id) {
+  if (this.disconnectionTimeouts && this.disconnectionTimeouts[client_id]) {
+    clearTimeout(this.disconnectionTimeouts[client_id]);
+    delete this.disconnectionTimeouts[client_id];
+  }
   }
 
   findClientByConnection(connection) {

@@ -16,7 +16,6 @@ class ClientManager {
   //Removes a client -> void
   removeClient(client_id) {
     delete this.clients[client_id];
-    console.log(`Client removed: ${client_id}`);
   }
 
   //Returns a clients connection by its id -> string

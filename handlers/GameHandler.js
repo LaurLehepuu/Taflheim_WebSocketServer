@@ -5,21 +5,29 @@ const InputValidator = require('../utils/InputValidator');
 const EventEmitter = require('events');
 
 class GameHandler extends EventEmitter {
-  constructor(clientManager, gameManager) {
+  constructor(clientManager, gameManager, resourceManager) {
     super();
     this.clientManager = clientManager;
     this.gameManager = gameManager;
+    this.resourceManager = resourceManager;
   }
 
   // Handles game creation -> void
   handleCreate(message) {
     const gameId = uuidv4();
-    const clientId = message.client_id;
+    const client_id = message.client_id;
     
-    const game = this.gameManager.createGame(gameId, message.board, message.length);
+
+    //Check if the ip can create a game
+    if (!this.resourceManager.canCreateGame(client_id)) {
+      return this.emit('sendErrorToClient', client_id, 'game_limit_reached', "You already have too many active games")
+    }
+
+    const game = this.gameManager.createGame(client_id, gameId, message.board, message.length);
+    this.resourceManager.addGame(client_id)
     const payload = PayloadBuilder.create(game);
     
-    const client = this.clientManager.getClient(clientId);
+    const client = this.clientManager.getClient(client_id);
     client.connection.send(JSON.stringify(payload));
   }
 
@@ -32,17 +40,17 @@ class GameHandler extends EventEmitter {
 
     //Send error to client doesnt work from websocket
     if (!InputValidator.validateClientId(client_id)) {
-      this.sendErrorToClient(client_id, "invalid_client_id", "Client ID format is invalid");
+      this.emit('sendErrorToClient', client_id, "invalid_client_id", "Client ID format is invalid");
       return
     }
 
     if (!InputValidator.validateGameId(game_id)) {
-      this.sendErrorToClient(client_id, "invalid_game_id", "Game ID format is invalid")
+      this.emit('sendErrorToClient', client_id, "invalid_game_id", "Game ID format is invalid")
       return;
     }
 
     if (role && !InputValidator.validateRole(role)) {
-    this.sendErrorToClient(client_id, "invalid_role", "Role must be 'attacker' or 'defender'");
+    this.emit('sendErrorToClient', client_id, "invalid_role", "Role must be 'attacker' or 'defender'");
     return;
     }
     //#endregion

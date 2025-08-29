@@ -7,6 +7,7 @@ const GameHandler = require('./handlers/GameHandler');
 const MoveHandler = require('./handlers/MoveHandler')
 const ClientManager = require("./managers/ClientManager");
 const GameManager = require("./managers/GameManager");
+const ResourceManager = require("./managers/ResourceManager")
 const WebSocketManager = require("./managers/WebSocketManager");
 const ruleEngine = require("./utils/RuleEngine");
 
@@ -19,12 +20,13 @@ httpServer.listen(PORT, () => {
 // Initialize managers
 const clientManager = new ClientManager();
 const gameManager = new GameManager();
+const resourceManager = new ResourceManager()
 
 // Initialize handlers here
 const connectionHandler = new ConnectionHandler(clientManager);
-const gameHandler = new GameHandler(clientManager, gameManager);
+const gameHandler = new GameHandler(clientManager, gameManager, resourceManager);
 const moveHandler = new MoveHandler(clientManager, gameManager);
 
 //Initialize webSocketManager
-const webSocketManager = new WebSocketManager(httpServer, connectionHandler, gameHandler, moveHandler, clientManager, gameManager);
+const webSocketManager = new WebSocketManager(httpServer, connectionHandler, gameHandler, moveHandler, clientManager, gameManager, resourceManager);
 console.log("WebSocket server initialized and ready for connections");

@@ -3,20 +3,21 @@ const EventEmitter = require('events');
 const TurnTimer = require('../utils/TurnTimer')
 
 class GameManager extends EventEmitter {
-  constructor(inactivityTimeout = 30 * 60 * 1000) { //default 30 minutes
+  constructor(inactivityTimeout = 10 * 60 * 1000) { //default 10 minutes
     super();
     this.games = {};
     this.takenRoles = []
 
     // Start cleanup interval (check every 5 minutes)
     this.cleanupInterval = setInterval(() => {
+      console.log("Cleanup started")
       this.cleanupInactiveGames();
     }, 5 * 60 * 1000);
     this.inactivityTimeout = inactivityTimeout;
   }
 
   //Creates and returns a game -> Dictionary
-  createGame(game_id, initialGameState, length) {
+  createGame(client_id, game_id, initialGameState, length) {
     this.games[game_id] = {
       id: game_id,
       timer: new TurnTimer(length*60000 , "attacker", (win_con, winner) => this.gameTimerTimeout(game_id, win_con, winner)), //Convert minutes to ms
@@ -27,6 +28,7 @@ class GameManager extends EventEmitter {
       current_turn: "attacker",
       active: false,
       created_at: Date.now(),
+      created_by: client_id,
       last_activity: Date.now()
     };
     console.log(`Game created: ${game_id}`);
@@ -209,11 +211,11 @@ class GameManager extends EventEmitter {
     const gamesToDelete = [];
 
     for (const [gameId, game] of Object.entries(this.games)) {
-      const timeSinceActivity = now - game.lastActivity;
+      const timeSinceActivity = now - game.last_activity;
       
       // Delete if inactive for longer than timeout or if game ended and been inactive
       if (timeSinceActivity > this.inactivityTimeout || 
-          (!game.active && timeSinceActivity > 10 * 60 * 1000)) { // 10 min for ended games
+          (!game.active && timeSinceActivity > 5 * 60 * 1000)) { // 5 min for ended games
         gamesToDelete.push(gameId);
       }
     }
@@ -235,7 +237,8 @@ class GameManager extends EventEmitter {
       if (game.timer) {
         game.timer.stop();
       }
-      
+      const client_id = this.games[gameId].created_by
+      this.emit('deleteGame', client_id)
       delete this.games[gameId];
       console.log(`Game deleted: ${gameId}`);
       return true;

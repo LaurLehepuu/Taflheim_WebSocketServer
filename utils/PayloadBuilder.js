@@ -31,10 +31,20 @@ class PayloadBuilder {
         };
     }
 
-    static join(newClient, game) {
+    static currentGameState(opponent_username, opponent_rating, game_state) {
+        return {
+            method: "current_game_state",
+            opponent_username,
+            opponent_rating,
+            game_state 
+        }
+    }
+
+    static join(new_client_name, new_client_rating, game) {
         return {
             method: "join",
-            new_client: newClient,
+            new_client: new_client_name,
+            new_client_rating,
             game
         };
     }

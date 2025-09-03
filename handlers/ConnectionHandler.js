@@ -10,13 +10,11 @@ class ConnectionHandler extends EventEmitter {
   }
   
   //Handles creating a new connection for a client -> String
-  handleNewConnection(connection) {
-    const clientId = uuidv4();
-    this.clientManager.addClient(clientId, connection);
+  handleNewConnection(connection, client_id) {
+    this.clientManager.addClient(client_id, connection);
     
-    const payload = PayloadBuilder.connect(clientId);
+    const payload = PayloadBuilder.connect(client_id);
     connection.send(JSON.stringify(payload));
-    return clientId;
   }
 
   //Handles when client sessions should resume (when changing pages) -> void

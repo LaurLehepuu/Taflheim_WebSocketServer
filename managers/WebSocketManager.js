@@ -76,6 +76,14 @@ class WebSocketManager {
       this.sendErrorToClient(client_id, error_type, message, details);
     });
 
+    this.gameHandler.on('sendToClient', (client_id, payload) => {
+      this.sendToClient(client_id, payload)
+    })
+
+    this.gameHandler.on('broadcastToOtherPlayers', (game_id, client_id, payload) => {
+      this.broadcastToOtherPlayers(game_id, client_id, payload)
+    })
+
     this.gameHandler.on('broadcastToGame', (game_id, payload) => {
       this.broadcastToGame(game_id, payload);
     });
@@ -202,6 +210,7 @@ class WebSocketManager {
 
     //Validate message structure
     if (!this.validateMessage(parsedMessage)) {
+      console.log(`Non valid structure payload :${message.utf8Data}`)
       this.sendError(connection, "validation_error", "Invalid message structure");
       return;
     }
@@ -215,10 +224,6 @@ validateMessage(message) {
     return false;
   }
 
-  if (message.method === "new_connection") {
-    return true; // no client_id required
-  }
-
   // all other methods require a client_id
   return typeof message.client_id === "string";
 }
@@ -230,8 +235,8 @@ routeMessage(message, connection) {
 
   // Handle connection methods that don't require client validation
   if (method === "new_connection") {
-    const client_id = this.connectionHandler.handleNewConnection(connection);
-    console.log(`New Connection established: ${client_id}`)
+    this.connectionHandler.handleNewConnection(connection, message.client_id);
+    console.log(`New Connection established: ${message.client_id}`)
     return;
   }
 
@@ -296,6 +301,16 @@ routeMessage(message, connection) {
       }});
     }
 
+  sendToClient(client_id, payload) {
+    const client = this.clientManager.getClient(client_id)
+    if (client) {
+      client.connection.send(JSON.stringify(payload))
+    }
+    else {
+      console.error(`COULDNT SEND CLIENT ${client_id} a message`)
+    }
+  }
+
   // Broadcasts a payload to all players in a game -> void
   broadcastToGame(gameId, payload) {
       const clients = this.gameManager.getGameClients(gameId);
@@ -307,8 +322,8 @@ routeMessage(message, connection) {
       });
     }
 
-    //Sends the error message to the given connection -> bool
-    sendError(connection, error_type, message, details = null) {
+  //Sends the error message to the given connection -> bool
+  sendError(connection, error_type, message, details = null) {
     if (!connection || connection.readyState != connection.OPEN) {
       console.error("Cannot send error - connection is not open")
       return false;

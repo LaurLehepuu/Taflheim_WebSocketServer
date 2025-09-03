@@ -1,5 +1,6 @@
 /* Handles Game related actions */
 const { v4: uuidv4 } = require('uuid');
+const app_db = require('../utils/Database')
 const PayloadBuilder = require('../utils/PayloadBuilder');
 const InputValidator = require('../utils/InputValidator');
 const EventEmitter = require('events');
@@ -32,7 +33,7 @@ class GameHandler extends EventEmitter {
   }
 
   // Handles people joining games -> void
-  handleJoin(message) {
+  async handleJoin(message) {
     const { client_id, game_id, role } = message;
 
 
@@ -65,12 +66,27 @@ class GameHandler extends EventEmitter {
       return;
     }
 
+    //Find player name and rating
+    const user = await app_db.findUsernameAndRating(client_id)
+    const game = this.gameManager.getGame(game_id)
+
+    //If there already is a person in the game
+    if (game.clients.length == 1) {
+      const opponent = await app_db.findUsernameAndRating(game.clients[0].id)
+      
+      //Send the player who joined an "Up to date" payload so they can match UI (add gamestate to this)
+      const current_game_payload = PayloadBuilder.currentGameState(opponent.username, opponent.current_rating, game.game_state)
+      this.emit('ToClient', client_id, current_game_payload)
+    }
+
     this.gameManager.addPlayerToGame(game_id, client_id, role);
-    const game = this.gameManager.getGame(game_id);
-    const joinPayload = PayloadBuilder.join(client_id, game);
+
+
+
+    const join_payload = PayloadBuilder.join(user.username, user.current_rating, game);
 
     // Notify all clients in the game
-    this.emit('broadcastToGame', game_id, joinPayload)
+    this.emit('broadcastToGame', game_id, join_payload)
   }
 
   // Handles client ready status -> void
@@ -94,10 +110,6 @@ class GameHandler extends EventEmitter {
 
     // Set client as ready and check if all clients are ready
     const all_ready = this.gameManager.setClientReady(game_id, client_id);
-
-    // Notify all clients that someone is ready
-    const ready_payload = PayloadBuilder.ready(client_id, game_id);
-    this.emit('broadcastToGame', game_id, ready_payload)
 
     // If all clients are ready, send the players their roles and start the game
     if (all_ready) {

@@ -135,7 +135,7 @@ function king_corner_retreat(game_state) {
       
       if (square.includes("k")) {
         game_over_reason = "king_corner_retreat";
-        winner = "Defender"
+        winner = "defender"
         return true;
       }
 
@@ -185,7 +185,7 @@ function king_surrounded(game_state) {
     }
   }
   game_over_reason = "king_surrounded";
-  winner = "Attacker"
+  winner = "attacker"
   return true;
 }
 
@@ -251,7 +251,7 @@ function edge_fort_escape(game_state) {
 
   if (has_empty_square) {
     game_over_reason = "edge_fort_escape";
-    winner = "Defender"
+    winner = "defender"
     return true;
   } else {
     return false;
@@ -285,7 +285,7 @@ function defenders_surrounded(game_state) {
   }
 
   game_over_reason = "defenders_surrounded";
-  winner = "Attacker"
+  winner = "attacker"
   return true;
 }
 

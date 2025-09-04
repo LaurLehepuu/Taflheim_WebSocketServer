@@ -137,7 +137,6 @@ class WebSocketManager {
         const role = this.gameManager.getPlayerRole(client.game_id, client_id)
 
         const payload = {
-          client_id,
           game_id: client.game_id,
           win_condition: "opponent_disconnect",
           winner: role == "attacker" ? "defender" : "attacker",
@@ -267,9 +266,6 @@ routeMessage(message, connection) {
           break;
         case "ready":
           this.gameHandler.handleReady(message);
-          break;
-        case "win":
-          this.gameHandler.handleWin(message);
           break;
         case "move":
           this.moveHandler.handleMove(message);

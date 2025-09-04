@@ -68,12 +68,16 @@ class GameHandler extends EventEmitter {
     }
 
     //Find player name and rating
-    const user = await app_db.findUsernameAndRating(client_id)
+    const user = await app_db.findUsername(client_id)
+    const user_rating_info = await app_db.findRatingInfo(client_id)
+    console.log(user_rating_info)
     const game = this.gameManager.getGame(game_id)
-    
-    this.gameManager.addPlayerToGame(game_id, client_id, role);
 
-    const join_payload = PayloadBuilder.join(user.username, user.current_rating, game);
+
+    
+    this.gameManager.addPlayerToGame(game_id, client_id, role, user_rating_info.rating);
+
+    const join_payload = PayloadBuilder.join(user.username, user_rating_info.rating, game);
     
     // Notify all clients in the game
     this.emit('broadcastToGame', game_id, join_payload)
@@ -106,9 +110,11 @@ class GameHandler extends EventEmitter {
     //Send the player who just got ready a "catch up" payload if they arent first
     if (game.clients.length == 2) {
       const opponent_client = game.clients.find(client => client.id !== client_id);
-      const opponent = await app_db.findUsernameAndRating(opponent_client.id);
-      
-      const current_game_payload = PayloadBuilder.currentGameState(opponent.username, opponent.current_rating, game.game_state);
+
+      const opponent = await app_db.findUsername(opponent_client.id);
+      const opponent_rating_info = await app_db.findRatingInfo(opponent_client.id);
+
+      const current_game_payload = PayloadBuilder.currentGameState(opponent.username, opponent_rating_info.rating , game.game_state);
       this.emit('sendToClient', client_id, current_game_payload);
     }
 
@@ -124,15 +130,14 @@ class GameHandler extends EventEmitter {
 
   handleWin(message) {
     const {game_id, win_condition, winner} = message
-    this.gameManager.gameWin(game_id, win_condition) 
+    this.gameManager.gameWin(game_id, winner)
+
     const win_payload = PayloadBuilder.win(game_id, win_condition, winner)
     this.emit('broadcastToGame', game_id, win_payload)
   }
 
-  handleTimeout(game_id, win_con, winner) {
-    this.gameManager.gameWin(game_id, win_con)
-    const win_payload = PayloadBuilder.win(game_id, win_con, winner)
-    this.emit('broadcastToGame', game_id, win_payload)
+  handleTimeout(game_id, win_condition, winner) {
+    this.handleWin({game_id, win_condition, winner})
   }
   
 }

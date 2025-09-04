@@ -5,7 +5,7 @@ const ConnectionHandler = require('../handlers/ConnectionHandler');
 const GameHandler = require('../handlers/GameHandler');
 const MoveHandler = require('../handlers/MoveHandler');
 const PayloadBuilder = require("../utils/PayloadBuilder");
-const logger = require('../config/winston_config')
+const { logger } = require('../config/winston_config')
 
 class WebSocketManager {
   constructor(httpServer, connectionHandler, gameHandler, moveHandler, clientManager, gameManager, resourceManager) {

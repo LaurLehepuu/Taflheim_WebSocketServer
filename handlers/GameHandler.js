@@ -4,7 +4,7 @@ const app_db = require('../utils/Database')
 const PayloadBuilder = require('../utils/PayloadBuilder');
 const InputValidator = require('../utils/InputValidator');
 const EventEmitter = require('events');
-const logger = require('../config/winston_config')
+const { logger } = require('../config/winston_config')
 
 class GameHandler extends EventEmitter {
   constructor(clientManager, gameManager, resourceManager) {

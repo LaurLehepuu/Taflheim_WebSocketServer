@@ -1,6 +1,6 @@
-/* Manages Clients on the server*/
-const logger = require('../config/winston_config')
+const { logger } = require("../config/winston_config");
 
+/* Manages Clients on the server*/
 class ClientManager {
   constructor() {
     this.clients = {};
@@ -12,7 +12,7 @@ class ClientManager {
       connection,
       game_id: gameId
     };
-    console.info(`Client registered: ${client_id}`);
+    logger.info(`Client registered: ${client_id}`);
   }
 
   //Removes a client -> void

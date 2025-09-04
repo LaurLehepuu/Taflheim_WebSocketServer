@@ -1,7 +1,7 @@
 //Rule engine functions to double check client made moves
 
 //Imports
-const logger = require('../config/winston_config')
+const { logger } = require('../config/winston_config')
 const {find_king, flood_fill, sign, remove_piece} = require("./HelperFunctions")
 
 //Active Rules

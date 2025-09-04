@@ -10,11 +10,12 @@ const GameManager = require("./managers/GameManager");
 const ResourceManager = require("./managers/ResourceManager")
 const WebSocketManager = require("./managers/WebSocketManager");
 const ruleEngine = require("./utils/RuleEngine");
+const { logger } = require("./config/winston_config");
 
 // Create and start HTTP server
 const httpServer = http.createServer();
 httpServer.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
+  logger.info(`Server listening on port ${PORT}`);
 });
 
 // Initialize managers

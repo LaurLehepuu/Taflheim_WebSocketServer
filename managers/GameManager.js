@@ -1,7 +1,7 @@
 /* Manages Active Games on the server */
 const EventEmitter = require('events');
 const TurnTimer = require('../utils/TurnTimer')
-const logger = require('../config/winston_config')
+const { logger } = require('../config/winston_config')
 
 class GameManager extends EventEmitter {
   constructor(inactivityTimeout = 10 * 60 * 1000) { //default 10 minutes

@@ -4,7 +4,6 @@ const app_db = require('../utils/Database')
 const PayloadBuilder = require('../utils/PayloadBuilder');
 const InputValidator = require('../utils/InputValidator');
 const EventEmitter = require('events');
-const { Glicko2 } = require('glicko2')
 const { logger } = require('../config/winston_config')
 
 class GameHandler extends EventEmitter {
@@ -76,7 +75,7 @@ class GameHandler extends EventEmitter {
 
 
     
-    this.gameManager.addPlayerToGame(game_id, client_id, role);
+    this.gameManager.addPlayerToGame(game_id, client_id, role, user_rating_info.rating);
 
     const join_payload = PayloadBuilder.join(user.username, user_rating_info.rating, game);
     
@@ -111,6 +110,7 @@ class GameHandler extends EventEmitter {
     //Send the player who just got ready a "catch up" payload if they arent first
     if (game.clients.length == 2) {
       const opponent_client = game.clients.find(client => client.id !== client_id);
+
       const opponent = await app_db.findUsername(opponent_client.id);
       const opponent_rating_info = await app_db.findRatingInfo(opponent_client.id);
 
@@ -130,10 +130,7 @@ class GameHandler extends EventEmitter {
 
   handleWin(message) {
     const {game_id, win_condition, winner} = message
-    this.gameManager.gameWin(game_id, win_condition) 
-    //Update rating
-
-    //Save game to DB
+    this.gameManager.gameWin(game_id, winner)
 
     const win_payload = PayloadBuilder.win(game_id, win_condition, winner)
     this.emit('broadcastToGame', game_id, win_payload)

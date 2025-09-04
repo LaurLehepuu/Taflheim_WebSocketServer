@@ -5,10 +5,10 @@ class GlickoCalculator {
     }
 
     calculatePostGameRatings(loser_ratings, winner_ratings) {
-        const { loser_rating, loser_rd, loser_volatility } = loser_ratings
-        const { winner_rating, winner_rd, winner_volatility } = winner_ratings
-        const loser = this.ranking.makePlayer(loser_rating, loser_rd, loser_volatility)
-        const winner = this.ranking.makePlayer(winner_rating, winner_rd, winner_volatility)
+        const loser = this.ranking.makePlayer(loser_ratings.rating, loser_ratings.rating_deviation, loser_ratings.rating_volatility)
+        const winner = this.ranking.makePlayer(winner_ratings.rating, winner_ratings.rating_deviation, winner_ratings.rating_volatility)
+
+        console.log(winner, loser)
         this.ranking.updateRatings([[winner,loser, 1]])
 
         //Package the new ratings

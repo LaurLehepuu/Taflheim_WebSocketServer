@@ -42,7 +42,6 @@ class AppDatabase {
         const loser_user_id = await this.findUserId(loser_player_id)
 
         const {loser, winner} = new_ratings
-        logger.info(loser.rating, loser.rating_deviation, loser.rating_volatility)
         const update_query =`
             UPDATE user_ratings
             SET rating = ?, rating_deviation = ?, rating_volatility = ?

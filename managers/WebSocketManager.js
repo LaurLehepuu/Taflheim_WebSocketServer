@@ -267,9 +267,6 @@ routeMessage(message, connection) {
         case "ready":
           this.gameHandler.handleReady(message);
           break;
-        case "win":
-          this.gameHandler.handleWin(message);
-          break;
         case "move":
           this.moveHandler.handleMove(message);
           break;

@@ -1,6 +1,8 @@
 /* Manages Active Games on the server */
 const EventEmitter = require('events');
 const TurnTimer = require('../utils/TurnTimer')
+const app_db = require('../utils/Database')
+const glickoCalculator = require('../utils/Glicko')
 const { logger } = require('../config/winston_config')
 
 class GameManager extends EventEmitter {
@@ -46,7 +48,7 @@ class GameManager extends EventEmitter {
   }
 
   //Returns true if player could be added, otherwise false -> bool
-  addPlayerToGame(gameId, client_id, role) {
+  addPlayerToGame(gameId, client_id, role, rating) {
     const game = this.games[gameId];
 
     if(!game) {
@@ -90,6 +92,7 @@ class GameManager extends EventEmitter {
         const client = {
           id: client_id,
           role,
+          rating,
           timer: game.length,
           ready: false,
         }
@@ -127,10 +130,11 @@ class GameManager extends EventEmitter {
   getCurrentTurn(game_id){
     return this.games[game_id].current_turn
   }
+
   getPlayerRole(game_id, client_id) {
     const game = this.games[game_id]
     if (!game){
-      logger.info("no game")
+      logger.error("no game")
     }
     const client = game.clients.find(clientObj => clientObj.id == client_id)
     return client ? client.role : undefined
@@ -197,11 +201,37 @@ class GameManager extends EventEmitter {
     this.emit('gameTimeout', game_id, win_con, winner);
   }
 
-  //Ends game by making it inactive -> void
-  gameWin(gameId, win_con) {
+  //Calculates new ratings, updates them and ends the game by making it inactive -> void
+  gameWin(gameId, winner) {
+    //find clients 
+    const clients = this.games[gameId].clients
+    if (!clients) {
+      logger.error("No client found when gameWin")
+      return 
+    }
+    const defender = clients.find(clientObj => clientObj.role == 'defender')
+    const attacker = clients.find(clientObj => clientObj.role == 'attacker') 
+    
+    //Get their ratings
+    const defender_ratings = app_db.findRatingInfo(defender.id)
+    const attacker_ratings = app_db.findRatingInfo(attacker.id)
+    
+    //Calculate new ratings and update them
+    let new_ratings;
+    if (winner = 'defender') {
+      new_ratings = glickoCalculator.calculatePostGameRatings(attacker_ratings, defender_ratings)
+      app_db.updateRatingInfo(new_ratings, attacker.id, defender.id)
+    }
+    else {
+      new_ratings = glickoCalculator.calculatePostGameRatings(defender_ratings, attacker_ratings)
+      app_db.updateRatingInfo(new_ratings, defender.id, attacker.id)
+    }
+
+    //Save game to DB !TODO
+
     const game = this.games[gameId];
     game.active = false;
-    game.won_by = win_con 
+    game.won_by = winner 
     game.timer.stop()
     game.lastActivity = Date.now()
   }
@@ -230,7 +260,7 @@ class GameManager extends EventEmitter {
     }
   }
 
-    // Delete a specific game
+  // Delete a specific game
   deleteGame(gameId) {
     const game = this.games[gameId];
     if (game) {

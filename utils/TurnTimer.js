@@ -1,3 +1,5 @@
+const { logger } = require("../config/winston_config");
+
 class TurnTimer {
     constructor(initial_time, starting_side, on_timeout_call_back) {
         this.defender_time = initial_time
@@ -38,7 +40,7 @@ class TurnTimer {
                 }
             }, 100) //Update every 100ms
         } catch (error) {
-            console.error("Timer start error:", error);
+            logger.error("Timer start error:", error);
             this.is_running = false;
         }
     }

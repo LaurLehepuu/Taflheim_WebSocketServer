@@ -1,6 +1,7 @@
 /* Manages Active Games on the server */
 const EventEmitter = require('events');
 const TurnTimer = require('../utils/TurnTimer')
+const logger = require('../config/winston_config')
 
 class GameManager extends EventEmitter {
   constructor(inactivityTimeout = 10 * 60 * 1000) { //default 10 minutes
@@ -10,7 +11,7 @@ class GameManager extends EventEmitter {
 
     // Start cleanup interval (check every 5 minutes)
     this.cleanupInterval = setInterval(() => {
-      console.log("Cleanup started")
+      logger.info("Cleanup started")
       this.cleanupInactiveGames();
     }, 5 * 60 * 1000);
     this.inactivityTimeout = inactivityTimeout;
@@ -31,7 +32,7 @@ class GameManager extends EventEmitter {
       created_by: client_id,
       last_activity: Date.now()
     };
-    console.log(`Game created: ${game_id}`);
+    logger.info(`Game created: ${game_id}`);
     return this.games[game_id];
   }
 
@@ -49,12 +50,12 @@ class GameManager extends EventEmitter {
     const game = this.games[gameId];
 
     if(!game) {
-      console.error(`Game ${gameId} not found`);
+      logger.error(`Game ${gameId} not found`);
       return false;
     }
 
     if (!client_id) {
-      console.error("Cliend ID is required")
+      logger.error("Cliend ID is required")
       return false;
     }
 
@@ -94,7 +95,7 @@ class GameManager extends EventEmitter {
         }
         game.takenRoles = role
         game.clients.push(client);
-        console.log(`Player ${client_id} added to game ${gameId} as ${role}`);
+        logger.info(`Player ${client_id} added to game ${gameId} as ${role}`);
         return true;
     }
     return false;
@@ -129,7 +130,7 @@ class GameManager extends EventEmitter {
   getPlayerRole(game_id, client_id) {
     const game = this.games[game_id]
     if (!game){
-      console.log("no game")
+      logger.info("no game")
     }
     const client = game.clients.find(clientObj => clientObj.id == client_id)
     return client ? client.role : undefined
@@ -225,7 +226,7 @@ class GameManager extends EventEmitter {
     });
 
     if (gamesToDelete.length > 0) {
-      console.log(`Cleaned up ${gamesToDelete.length} inactive games`);
+      logger.info(`Cleaned up ${gamesToDelete.length} inactive games`);
     }
   }
 
@@ -240,7 +241,7 @@ class GameManager extends EventEmitter {
       const client_id = this.games[gameId].created_by
       this.emit('deleteGame', client_id)
       delete this.games[gameId];
-      console.log(`Game deleted: ${gameId}`);
+      logger.info(`Game deleted: ${gameId}`);
       return true;
     }
     return false;

@@ -1,6 +1,7 @@
 //Rule engine functions to double check client made moves
 
 //Imports
+const logger = require('../config/winston_config')
 const {find_king, flood_fill, sign, remove_piece} = require("./HelperFunctions")
 
 //Active Rules
@@ -226,7 +227,7 @@ function edge_fort_escape(game_state) {
     const square_array = game_state[y][x];
 
     if (square_array.length > 0 && square_array[0] === "a") {
-      console.log("attackers in the flooded area")
+      logger.info("attackers in the flooded area")
       return false;
     }
   }
@@ -372,7 +373,7 @@ function sandwich_check(game_state, aggressor_square) {
         if (victim === "k") return;
 
         // Regular piece capture
-        console.log("Piece captured at:", [victim_y, victim_x]);
+        logger.info("Piece captured at:", [victim_y, victim_x]);
         game_state[victim_y][victim_x] = ' ';
         taken_piece_coordinates.push([victim_y, victim_x]);
       }
@@ -384,7 +385,7 @@ function sandwich_check(game_state, aggressor_square) {
       if (aggressor === "d" && helping_aggressor === "k" && victim === "a" ||
           aggressor === "k" && helping_aggressor === "d" && victim === "a"
       ) {
-        console.log("Armed king Piece capture at:", [victim_y, victim_x]);
+        logger.info("Armed king Piece capture at:", [victim_y, victim_x]);
         game_state[victim_y][victim_x] = ' ';
         taken_piece_coordinates.push([victim_y, victim_x]);
 
@@ -397,7 +398,7 @@ function sandwich_check(game_state, aggressor_square) {
           continue;
         }
         if (victim !== "k") {
-          console.log("Piece captured against restricted square at:", [victim_y, victim_x]);
+          logger.info("Piece captured against restricted square at:", [victim_y, victim_x]);
           game_state[victim_y][victim_x] = ' ';
           taken_piece_coordinates.push([victim_y, victim_x]);
         }
@@ -528,10 +529,10 @@ function canCaptureShieldwall(game_state, group, aggressor, edge, board_size, ag
     (firstBracketPos && firstBracketPos[0] === aggressorY && firstBracketPos[1] === aggressorX) ||
     (lastBracketPos && lastBracketPos[0] === aggressorY && lastBracketPos[1] === aggressorX)
   );
-  console.log("coordinates:", aggressorPos);
-  console.log("firstBracketPos:", firstBracketPos, "lastBracketPos:", lastBracketPos);
-  console.log("isAggressorBracketing:", isAggressorBracketing);
-  console.log("firstBracketed:", firstBracketed, "lastBracketed:", lastBracketed);
+  logger.info("coordinates:", aggressorPos);
+  logger.info("firstBracketPos:", firstBracketPos, "lastBracketPos:", lastBracketPos);
+  logger.info("isAggressorBracketing:", isAggressorBracketing);
+  logger.info("firstBracketed:", firstBracketed, "lastBracketed:", lastBracketed);
   return firstBracketed && lastBracketed && isAggressorBracketing;
 }
 
@@ -639,12 +640,12 @@ function captureShieldwallGroup(game_state, group, pieceType) {
   for (const [y, x] of group) {
     const piece = game_state[y][x][0];
     if (piece === 'k') {
-      console.log("King in shieldwall - king not captured at:", [y, x]);
+      logger.info("King in shieldwall - king not captured at:", [y, x]);
       continue; // Don't capture the king
     }
     // Capture attackers or defenders as needed
     if (piece === 'a' || piece === 'd') {
-      console.log("Shieldwall piece captured at:", [y, x]);
+      logger.info("Shieldwall piece captured at:", [y, x]);
       game_state[y][x] = ' ';
       taken_piece_coordinates.push([y, x]);
       capturedPieces.push[y,x];
@@ -652,7 +653,7 @@ function captureShieldwallGroup(game_state, group, pieceType) {
 }
   
   if (capturedPieces.length > 0) {
-    console.log("Shieldwall capture completed - captured", capturedPieces.length, "pieces");
+    logger.info("Shieldwall capture completed - captured", capturedPieces.length, "pieces");
   }
 }
 //#endregion

@@ -5,6 +5,7 @@ const ConnectionHandler = require('../handlers/ConnectionHandler');
 const GameHandler = require('../handlers/GameHandler');
 const MoveHandler = require('../handlers/MoveHandler');
 const PayloadBuilder = require("../utils/PayloadBuilder");
+const logger = require('../config/winston_config')
 
 class WebSocketManager {
   constructor(httpServer, connectionHandler, gameHandler, moveHandler, clientManager, gameManager, resourceManager) {
@@ -37,16 +38,16 @@ class WebSocketManager {
       }
 
       const connection = request.accept(null, request.origin);
-      console.log(`Connection opened to IP:${client_ip}`)
+      logger.info(`Connection opened to IP:${client_ip}`)
       this.resourceManager.addConnection(client_ip)
 
       connection.on("error", (error) => {
-        console.error("Websocket Connection error:", error)
+        logger.error("Websocket Connection error:", error)
         this.handleConnectionError(connection, error);
       });
 
       connection.on("close", (reasonCode, description) => {
-        console.log(`Connection closed with code: ${reasonCode}, description: ${description}`);
+        logger.info(`Connection closed with code: ${reasonCode}, description: ${description}`);
         this.handleDisconnect(connection)
       });
 
@@ -111,14 +112,14 @@ class WebSocketManager {
     
     if (!connection) {
       this.resourceManager.removeConnection(client_ip);
-      console.error('Connection not defined');
+      logger.error('Connection not defined');
       return;
     }
     
     const client_id = this.findClientByConnection(connection);
     if (!client_id) {
       this.resourceManager.removeConnection(client_ip);
-      console.error('Handling disconnect failed due to a non existent client_id');
+      logger.error('Handling disconnect failed due to a non existent client_id');
       return;
     }
     
@@ -152,10 +153,10 @@ class WebSocketManager {
       const currentClient = this.clientManager.getClient(client_id);
       
       if (!currentClient || currentClient.connection.readyState !== currentClient.connection.OPEN) {
-        console.log(`Client ${client_id} did not reconnect, cleaning up`);
+        logger.info(`Client ${client_id} did not reconnect, cleaning up`);
         
         this.clientManager.removeClient(client_id);
-        console.log(`Client ${client_id} removed due to disconnect`);
+        logger.info(`Client ${client_id} removed due to disconnect`);
       }
       
       // Clean up the timeout reference
@@ -195,7 +196,7 @@ class WebSocketManager {
   parseMessage(message, connection) {
     // Validate message format
     if (message.type !== 'utf8') {
-      console.warn("Non-UTF8 message received");
+      logger.warn("Non-UTF8 message received");
       return;
     }
     
@@ -203,14 +204,14 @@ class WebSocketManager {
     try {
       parsedMessage = JSON.parse(message.utf8Data);
     } catch (error) {
-      console.error("Error parsing JSON:", error);
+      logger.error("Error parsing JSON:", error);
       this.sendError(connection, "parse_error", "invalid JSON format")
       return;
     }
 
     //Validate message structure
     if (!this.validateMessage(parsedMessage)) {
-      console.log(`Non valid structure payload :${message.utf8Data}`)
+      logger.info(`Non valid structure payload :${message.utf8Data}`)
       this.sendError(connection, "validation_error", "Invalid message structure");
       return;
     }
@@ -236,19 +237,19 @@ routeMessage(message, connection) {
   // Handle connection methods that don't require client validation
   if (method === "new_connection") {
     this.connectionHandler.handleNewConnection(connection, message.client_id);
-    console.log(`New Connection established: ${message.client_id}`)
+    logger.info(`New Connection established: ${message.client_id}`)
     return;
   }
 
   if (method === "resume") {
-    console.log("Connection resume")
+    logger.info("Connection resume")
     this.connectionHandler.handleResume(message, connection);
     return;
   }
 
   // Validate client exists for all other methods
   if (!this.clientManager.clientExists(client_id)) {
-    console.log("Invalid client_id received:", client_id);
+    logger.info("Invalid client_id received:", client_id);
     return;
   }
 
@@ -274,14 +275,14 @@ routeMessage(message, connection) {
           this.moveHandler.handleMove(message);
           break;
         default:
-          console.log("Unknown method:", method);
+          logger.info("Unknown method:", method);
           this.sendError(connection, "unknown_method", `Method '${method}' is not supported`, {
             method: method,
             supported_methods: ["create", "join", "start", "ready", "win", "move"]
           });
       }
     } catch (error) {
-      console.error(`Error handling method ${method}:`, error);
+      logger.error(`Error handling method ${method}:`, error);
       this.sendError(connection, "handler_error", "Internal server error while processing request", {
         method: method
       });
@@ -307,7 +308,7 @@ routeMessage(message, connection) {
       client.connection.send(JSON.stringify(payload))
     }
     else {
-      console.error(`COULDNT SEND CLIENT ${client_id} a message`)
+      logger.error(`COULDNT SEND CLIENT ${client_id} a message`)
     }
   }
 
@@ -325,18 +326,18 @@ routeMessage(message, connection) {
   //Sends the error message to the given connection -> bool
   sendError(connection, error_type, message, details = null) {
     if (!connection || connection.readyState != connection.OPEN) {
-      console.error("Cannot send error - connection is not open")
+      logger.error("Cannot send error - connection is not open")
       return false;
     }
 
     try {
       const errorPayload = PayloadBuilder.error(error_type, message, details);
       connection.send(JSON.stringify(errorPayload))
-      console.log(`Error sent to client: ${error_type} - ${message}`)
+      logger.info(`Error sent to client: ${error_type} - ${message}`)
       return true
 
     } catch (sendError) {
-      console.error("Failed to send error message:", sendError);
+      logger.error("Failed to send error message:", sendError);
       return false;
     }
   }
@@ -349,7 +350,7 @@ routeMessage(message, connection) {
           try {
               client.connection.send(JSON.stringify(errorPayload));
           } catch (error) {
-              console.error('Failed to send error to client', { client_id, error: error.message });
+              logger.error('Failed to send error to client', { client_id, error: error.message });
           }
       }
   }

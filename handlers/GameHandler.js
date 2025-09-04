@@ -4,6 +4,7 @@ const app_db = require('../utils/Database')
 const PayloadBuilder = require('../utils/PayloadBuilder');
 const InputValidator = require('../utils/InputValidator');
 const EventEmitter = require('events');
+const logger = require('../config/winston_config')
 
 class GameHandler extends EventEmitter {
   constructor(clientManager, gameManager, resourceManager) {
@@ -57,12 +58,12 @@ class GameHandler extends EventEmitter {
     //#endregion
 
     if (!this.gameManager.gameExists(game_id)) {
-      console.log("Game not found:", game_id);
+      logger.info("Game not found:", game_id);
       return;
     }
 
     if (this.gameManager.isGameFull(game_id)) {
-      console.log("Game is full");
+      logger.info("Game is full");
       return;
     }
 
@@ -86,7 +87,7 @@ class GameHandler extends EventEmitter {
     
     const game = this.gameManager.getGame(game_id);
     if (!this.gameManager.gameExists(game_id)) {
-      console.log("Game not found:", game_id);
+      logger.info("Game not found:", game_id);
       return;
     }
     
@@ -95,7 +96,7 @@ class GameHandler extends EventEmitter {
     const clientInGame = gameClientObjects.find(clientObj => clientObj.id == client_id)
     
     if (!clientInGame){
-      console.log("Cant find this client in current game:", client_id)
+      logger.info("Cant find this client in current game:", client_id)
       return
     }
 

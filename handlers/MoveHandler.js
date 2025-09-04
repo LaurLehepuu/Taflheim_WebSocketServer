@@ -3,6 +3,7 @@ const ruleEngine = require('../utils/RuleEngine');
 const PayloadBuilder = require('../utils/PayloadBuilder');
 const InputValidator = require('../utils/InputValidator');
 const EventEmitter = require('events');
+const { logger } = require('../config/winston_config');
 
 class MoveHandler extends EventEmitter {
   constructor(clientManager, gameManager) {
@@ -19,17 +20,17 @@ class MoveHandler extends EventEmitter {
 
     //#region Input validators
     if (!InputValidator.validateGameId(game_id)) {
-      console.error("Invalid game ID in move");
+      logger.error("Invalid game ID in move");
       return;
     }
     
     if (!InputValidator.validateMoveCoordinates(move_from)) {
-      console.error("Invalid move_from coordinates");
+      logger.error("Invalid move_from coordinates");
       return;
     }
     
     if (!InputValidator.validateMoveCoordinates(move_to)) {
-      console.error("Invalid move_to coordinates");  
+      logger.error("Invalid move_to coordinates");  
       return;
     }
     //#endregion
@@ -37,7 +38,7 @@ class MoveHandler extends EventEmitter {
 
     //Make sure all critical info exists
     if (!game_id || !client_id || !move_from || !move_to) {
-      console.error("Missing required move paramaters");
+      logger.error("Missing required move paramaters");
       return;
     }
 
@@ -45,7 +46,7 @@ class MoveHandler extends EventEmitter {
 
     //Make sure game exists
     if (!game) {
-      console.error(`Game ${game_id} not found`);
+      logger.error(`Game ${game_id} not found`);
       return;
     }
 
@@ -54,13 +55,13 @@ class MoveHandler extends EventEmitter {
 
     // If it is not currently this players turn, return
     if (current_turn != player_role){
-      console.log("Not currently that players turn:", client_id)
+      logger.info("Not currently that players turn:", client_id)
       return;
     }
 
     //This should never happen due to inactive pieces on the client but we might want to change that someday
     if (game.active == false){
-      console.log("Game is inactive")
+      logger.info("Game is inactive")
       return;
     }
 
@@ -98,7 +99,7 @@ class MoveHandler extends EventEmitter {
     // Check for win condition
     const hasWon = ruleEngine.has_win_occurred(gameState);
     if (hasWon) {
-      console.log(ruleEngine.game_over_reason);
+      logger.info(ruleEngine.game_over_reason);
       const winPayload = PayloadBuilder.win(gameId, ruleEngine.game_over_reason, ruleEngine.winner);
       this.gameManager.gameWin(gameId, ruleEngine.game_over_reason)
       this.emit('broadcastToGame', gameId, winPayload)
